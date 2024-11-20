@@ -36,4 +36,6 @@ def login():
             print("Access Denied")
 
 if __name__ == "__main__":
+    conn = sqlite3.connect('final_project.db', isolation_level = None)
+    cur = conn.cursor()
     login()
