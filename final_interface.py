@@ -1,12 +1,57 @@
 import sqlite3
-import csv
-import time
-import pandas as pd 
-import numpy as np
-import datetime
+import os
 import pwinput
+import pandas as pd
 
 from csv_to_sql import csv_to_sql
+
+def read_account(username):
+    # If admin, list everything
+    if username == "admin":
+        cur.execute("SELECT * FROM user_account")
+        account = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        cur.execute("SELECT * FROM bank_account")
+        checking = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        cur.execute("SELECT * FROM credit_card")
+        credit = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        cur.execute("SELECT * FROM purchase")
+        purchase = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        print("User accounts: " + "\n")
+        print(account)
+        print("")
+        print("Checking accounts: " + "\n")
+        print(checking)
+        print("")
+        print("Credit cards: " + "\n")
+        print(credit)
+        print("")
+        print("Purchases: " + "\n")
+        print(purchase)
+        print("")
+    # List specific user info
+    else:
+        cur.execute(f"SELECT bank_id FROM user_account WHERE username = '{username}'")
+        bank_id = cur.fetchone()[0]
+        cur.execute(f"SELECT * FROM user_account WHERE username = '{username}'")
+        account = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        cur.execute(f"SELECT * FROM bank_account WHERE bank_id = '{bank_id}'")
+        checking = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        cur.execute(f"SELECT * FROM credit_card WHERE bank_id = '{bank_id}'")
+        credit = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        cur.execute(f"SELECT * FROM purchase WHERE bank_id = '{bank_id}'")
+        purchase = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
+        print("User accounts: " + "\n")
+        print(account)
+        print("")
+        print("Checking accounts: " + "\n")
+        print(checking)
+        print("")
+        print("Credit cards: " + "\n")
+        print(credit)
+        print("")
+        print("Purchases: " + "\n")
+        print(purchase)
+        print("")
 
 def login():
     username_check = False
@@ -30,7 +75,9 @@ def login():
             print("Incorrect password")
 
 if __name__ == "__main__":
-    csv_to_sql()
+    if not os.path.exists("final_project.db"):
+        csv_to_sql()
+
     conn = sqlite3.connect('final_project.db', isolation_level = None)
     cur = conn.cursor()
     username = login()
@@ -47,6 +94,7 @@ if __name__ == "__main__":
         user_input = input("Enter your choice: ")
 
         if user_input == "a":
+            read_account(username)
             print("")
 
         elif user_input == "b":
@@ -71,6 +119,5 @@ if __name__ == "__main__":
             print("Invalid input, try again")
             print("")
 
-    cur.commit()
     cur.close()
 

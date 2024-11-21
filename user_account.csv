@@ -1,6 +1,6 @@
 bank_id,username,password,ssn,email
 1,admin,admin,000-00-0000,admin@bankapp.com
-2,hgreenrod,gre_9848,739-67-1645,hgreenrod0@cmu.edu
+2,greenrod,greenrod,739-67-1645,hgreenrod0@cmu.edu
 3,kdillway,dil_8627,433-41-3781,kdillway1@about.com
 4,imcshee,mcs_7171,730-30-3624,imcshee2@technorati.com
 5,ccanham,can_7445,431-19-7101,ccanham3@blogs.com
