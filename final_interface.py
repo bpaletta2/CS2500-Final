@@ -54,27 +54,29 @@ def read_account(username):
         print("")
 
 def pay_card(username):
+    # Find out which cards the current user owns
     cur.execute(f"SELECT cc.balance, cc.card_number, cc.card_type, cc.expiry_date FROM credit_card cc JOIN user_account u ON u.bank_id = cc.bank_id WHERE username = '{username}'")
     cards = cur.fetchall()
+    # If there are no cards, say there are no valid cards to pay off
     if not cards:
         print("Error: You have no valid cards to pay off \n")
         return
     else:
+        # List each card
         i = 1
         for card in cards:
             print(str(i) + ": " + str(card))
             i += 1
         print("")
 
-        cur.execute(f"SELECT bank_id FROM user_account WHERE username = '{username}'")
-        bank_id = cur.fetchone()[0]
-
+        # User must input which card he wants to pay down
         while True:
             user_card_selection = input("Select a card to pay (Type e to exit): ")
             if user_card_selection.lower() == 'e':
                 print("")
                 return
             try:
+                # Once a selection is made, we set the card_number for later query usage
                 user_card_selection = int(user_card_selection)
                 if 1 <= user_card_selection <= len(cards):
                     card_number = cards[user_card_selection - 1][1]
@@ -87,6 +89,7 @@ def pay_card(username):
                 print("Please enter a valid number or 'e' to exit \n")
 
         while True:
+            # Next we prompt the user for how much money they'd like to pay
             print("Balance = $" + str(cards[user_card_selection - 1][0]))
             user_payment = input("How much money would you like to pay? (Type e to exit): ")
             if user_payment.lower() == 'e':
@@ -98,16 +101,19 @@ def pay_card(username):
                     print("You chose to pay $" + str(user_payment))
                     cur.execute(f"SELECT ba.balance FROM bank_account ba JOIN user_account u ON u.bank_id = ba.bank_id WHERE username = '{username}'")
                     bank_balance = cur.fetchall()[0][0]
+                    # Here we check if the user has enough money for the payment
                     if float(bank_balance) >= user_payment:
+                        # We update the database and subtract the balance of both checking and card
                         cur.execute(f"UPDATE credit_card SET balance = balance - {user_payment} WHERE card_number = '{card_number}'")
-                        cur.execute(f"UPDATE bank_account SET balance = balance - {user_payment} WHERE bank_id = '{bank_id}'")
-                        cur.execute(f"SELECT balance FROM bank_account WHERE bank_id = '{bank_id}'")
+                        cur.execute(f"UPDATE bank_account SET balance = balance - {user_payment} WHERE bank_id = (SELECT bank_id FROM user_account WHERE username = '{username}')")
+                        cur.execute(f"SELECT ba.balance FROM bank_account ba JOIN user_account u ON u.bank_id = ba.bank_id WHERE username = '{username}'")
                         new_bank_balance = cur.fetchall()[0]
                         cur.execute(f"SELECT balance FROM credit_card WHERE card_number = '{card_number}'")
                         new_credit_balance = cur.fetchall()[0]
                         print("Successfully paid \n")
                         print("Your new bank balance is $" + str("{:.2f}".format(new_bank_balance[0])) + " and your new credit balance is $" + str("{:.2f}".format(new_credit_balance[0])))
                         return
+                    # If there isn't enough money, try again with a lower payment
                     else:
                         print("Insufficient funds to pay, try a lower amount \n")
                 else:
