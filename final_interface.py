@@ -40,18 +40,81 @@ def read_account(username):
         credit = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
         cur.execute(f"SELECT * FROM purchase WHERE bank_id = '{bank_id}'")
         purchase = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
-        print("User accounts: " + "\n")
+        print("User accounts: \n")
         print(account)
         print("")
-        print("Checking accounts: " + "\n")
+        print("Checking accounts: \n")
         print(checking)
         print("")
-        print("Credit cards: " + "\n")
+        print("Credit cards: \n")
         print(credit)
         print("")
-        print("Purchases: " + "\n")
+        print("Purchases: \n")
         print(purchase)
         print("")
+
+def pay_card(username):
+    cur.execute(f"SELECT cc.balance, cc.card_number, cc.card_type, cc.expiry_date FROM credit_card cc JOIN user_account u ON u.bank_id = cc.bank_id WHERE username = '{username}'")
+    cards = cur.fetchall()
+    if not cards:
+        print("Error: You have no valid cards to pay off \n")
+        return
+    else:
+        i = 1
+        for card in cards:
+            print(str(i) + ": " + str(card))
+            i += 1
+        print("")
+
+        cur.execute(f"SELECT bank_id FROM user_account WHERE username = '{username}'")
+        bank_id = cur.fetchone()[0]
+
+        while True:
+            user_card_selection = input("Select a card to pay (Type e to exit): ")
+            if user_card_selection.lower() == 'e':
+                print("")
+                return
+            try:
+                user_card_selection = int(user_card_selection)
+                if 1 <= user_card_selection <= len(cards):
+                    card_number = cards[user_card_selection - 1][1]
+                    print("You have selected card number: " + str(card_number))
+                    print("")
+                    break
+                else:
+                    print("Invalid input, try again \n")
+            except ValueError:
+                print("Please enter a valid number or 'e' to exit \n")
+
+        while True:
+            print("Balance = $" + str(cards[user_card_selection - 1][0]))
+            user_payment = input("How much money would you like to pay? (Type e to exit): ")
+            if user_payment.lower() == 'e':
+                print("")
+                return
+            try:
+                user_payment = float(user_payment)
+                if user_payment > 0:
+                    print("You chose to pay $" + str(user_payment))
+                    cur.execute(f"SELECT ba.balance FROM bank_account ba JOIN user_account u ON u.bank_id = ba.bank_id WHERE username = '{username}'")
+                    bank_balance = cur.fetchall()[0][0]
+                    if float(bank_balance) >= user_payment:
+                        cur.execute(f"UPDATE credit_card SET balance = balance - {user_payment} WHERE card_number = '{card_number}'")
+                        cur.execute(f"UPDATE bank_account SET balance = balance - {user_payment} WHERE bank_id = '{bank_id}'")
+                        cur.execute(f"SELECT balance FROM bank_account WHERE bank_id = '{bank_id}'")
+                        new_bank_balance = cur.fetchall()[0]
+                        cur.execute(f"SELECT balance FROM credit_card WHERE card_number = '{card_number}'")
+                        new_credit_balance = cur.fetchall()[0]
+                        print("Successfully paid \n")
+                        print("Your new bank balance is $" + str("{:.2f}".format(new_bank_balance[0])) + " and your new credit balance is $" + str("{:.2f}".format(new_credit_balance[0])))
+                        return
+                    else:
+                        print("Insufficient funds to pay, try a lower amount \n")
+                else:
+                    print("Please enter a positive amount.")
+            except ValueError:
+                print("Please enter a valid number (integer or decimal) or 'e' to exit \n")
+
 
 def login():
     username_check = False
@@ -88,7 +151,8 @@ if __name__ == "__main__":
         print("c) Deposit / withdraw money")
         print("d) Make a credit payment")
         print("e) Exit")
-        # print("z) Admin")
+        if username == "admin":
+            print("z) Admin")
         print("")
 
         user_input = input("Enter your choice: ")
@@ -104,6 +168,7 @@ if __name__ == "__main__":
             print("")
 
         elif user_input == "d":
+            pay_card(username)
             print("")
 
         elif user_input == "e":
@@ -112,8 +177,8 @@ if __name__ == "__main__":
             print("")
             break
 
-        # elif user_input == "z":
-        #     print("")
+        elif user_input == "z" and username == "admin":
+            print("")
 
         else:
             print("Invalid input, try again")
