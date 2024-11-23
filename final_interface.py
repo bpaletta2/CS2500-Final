@@ -2,8 +2,16 @@ import sqlite3
 import os
 import pwinput
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from csv_to_sql import csv_to_sql
+
+
+if not os.path.exists("final_project.db"):
+    csv_to_sql()
+
+conn = sqlite3.connect('final_project.db', isolation_level = None)
+cur = conn.cursor()
 
 def read_account(username):
     # If admin, list everything
@@ -121,6 +129,198 @@ def pay_card(username):
             except ValueError:
                 print("Please enter a valid number (integer or decimal) or 'e' to exit \n")
 
+def admin_panel():
+    # Lists all tables in the database
+    def list_tables():
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+
+        tables = cur.fetchall()
+
+        i = 1
+        for table in tables:
+            print(str(i) + ") " + str(table[0]))
+            i += 1
+        print("")
+        print("Select which table you'd like to modify")
+        print("")
+
+    # Checks if bank_id already exists
+    def bank_id_check(bank_id):
+        cur.execute(f"SELECT COUNT(*) FROM user_account WHERE bank_id = '{bank_id}'")
+        if cur.fetchone()[0] > 0:
+            return True
+        cur.execute(f"SELECT COUNT(*) FROM bank_account WHERE bank_id = '{bank_id}'")
+        if cur.fetchone()[0] > 0:
+            return True
+        print("")
+        return False
+
+    print("")
+    while True:
+        try:
+            print("a) Add a record")
+            print("b) Delete a record")
+            print("c) Visualize the database")
+            print("e) Exit")
+            print("")
+
+            user_choice = input("Enter your choice: ")
+
+            if user_choice == "a":
+                print("")
+                list_tables()
+                try:
+                    user_table = int(input("Enter your choice: "))
+                    if 1 <= user_table <= 4:
+                        print("")
+                        bank_id = input("Enter bank id: ")
+                        if user_table in (1, 2) and bank_id_check(bank_id):
+                            print("Error: bank_id " + bank_id + " already exists in table")
+                            continue
+
+                        # Add record to user_account
+                        if user_table == 1:
+                            username = input("Enter username: ")
+                            password = input("Enter password: ")
+                            ssn = input("Enter SSN: ")
+                            email = input("Enter email: ")
+                            cur.execute(f"INSERT INTO user_account (bank_id, username, password, ssn, email)"
+                                        f"VALUES ('{bank_id}', '{username}', '{password}', '{ssn}', '{email}')")
+
+                        # Add record to bank_account
+                        elif user_table == 2:
+                            routing_number = input("Enter routing number: ")
+                            account_number = input("Enter account number: ")
+                            balance = input("Enter balance: ")
+                            cur.execute(f"INSERT INTO bank_account (bank_id, routing_number, account_number, balance)"
+                                        f" VALUES ('{bank_id}', '{routing_number}', '{account_number}', '{balance}')")
+
+                        # Add record to credit_card
+                        elif user_table == 3:
+                            card_number = input("Enter card number: ")
+                            card_type = input("Enter card type: ")
+                            expiry_date = input("Enter expiry date: ")
+                            balance = input("Enter balance: ")
+                            cur.execute(f"INSERT INTO credit_card (bank_id, card_number, card_type, expiry_date, balance) "
+                                        f"VALUES ('{bank_id}', '{card_number}', '{card_type}', '{expiry_date}', '{balance}')")
+
+                        # Add record to purchase
+                        elif user_table == 4:
+                            payment_type = input("Enter payment type: ")
+                            amount = input("Enter amount: ")
+                            merchant = input("Enter merchant: ")
+                            cur.execute(f"INSERT INTO purchase (bank_id, payment_type, amount, merchant) "
+                                        f"VALUES ('{bank_id}', '{payment_type}', '{amount}', '{merchant}')")
+
+                        conn.commit()
+                        print("Record added successfully \n")
+                    else:
+                        print("Invalid input, try again \n")
+                except ValueError:
+                    print("Please enter a valid number or 'e' to exit \n")
+
+            elif user_choice == "b":
+                print("")
+                list_tables()
+                try:
+                    user_table = int(input("Enter your choice: "))
+                    if 1 <= user_table <= 4:
+                        bank_id = input("Enter the ID of the record to delete: ")
+
+                        # Remove record from user_account
+                        if user_table == 1:
+                            cur.execute(f"SELECT * FROM user_account WHERE bank_id = '{bank_id}'")
+                            record = cur.fetchone()
+                            if record:
+                                cur.execute(f"DELETE FROM user_account WHERE bank_id = '{bank_id}'")
+                                conn.commit()
+                                print("Record deleted successfully from user_account \n")
+                            else:
+                                print(f"No record with ID {bank_id} found in user_account \n")
+
+                        # Remove record from bank_account
+                        elif user_table == 2:
+                            cur.execute(f"SELECT * FROM bank_account WHERE bank_id = '{bank_id}'")
+                            record = cur.fetchone()
+                            if record:
+                                cur.execute(f"DELETE FROM bank_account WHERE bank_id = '{bank_id}'")
+                                conn.commit()
+                                print("Record deleted successfully from bank_account \n")
+                            else:
+                                print(f"No record with ID {bank_id} found in bank_account \n")
+
+                        # Remove record from credit_card
+                        elif user_table == 3:
+                            cur.execute(f"SELECT * FROM credit_card WHERE bank_id = '{bank_id}'")
+                            record = cur.fetchone()
+                            if record:
+                                cur.execute(f"DELETE FROM credit_card WHERE bank_id = '{bank_id}'")
+                                conn.commit()
+                                print("Record deleted successfully from credit_card \n")
+                            else:
+                                print(f"No record with ID {bank_id} found in credit_card \n")
+
+                        # Remove record from purchase
+                        elif user_table == 4:
+                            cur.execute(f"SELECT * FROM purchase WHERE bank_id = '{bank_id}'")
+                            record = cur.fetchone()
+                            if record:
+                                cur.execute(f"DELETE FROM purchase WHERE bank_id = '{bank_id}'")
+                                conn.commit()
+                                print("Record deleted successfully from purchase \n")
+                            else:
+                                print(f"No record with ID {bank_id} found in purchase \n")
+                    else:
+                        print("Invalid input, try again \n")
+                except ValueError:
+                    print("Please enter a valid number or 'e' to exit \n")
+
+            elif user_choice == "c":
+                print("")
+                bank_account = pd.read_sql_query("SELECT * FROM bank_account", conn)
+                credit_card = pd.read_sql_query("SELECT * FROM credit_card", conn)
+                purchase = pd.read_sql_query("SELECT * FROM purchase", conn)
+
+                bank_metrics = bank_account.groupby('bank_id')['balance'].agg(['sum', 'mean']).reset_index()
+                credit_metrics = credit_card.groupby('bank_id')['balance'].agg(['sum', 'mean']).reset_index()
+                purchase_metrics = purchase.groupby('bank_id')['amount'].agg(['count', 'mean']).reset_index()
+
+                fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+
+                # Plot bank_account
+                axes[0, 0].bar(bank_metrics['bank_id'], bank_metrics['sum'].astype(int), label='Total Balance', alpha=0.7)
+                axes[0, 0].set_title('Bank Account Balances')
+                axes[0, 0].set_xlabel('Bank ID')
+                axes[0, 0].set_ylabel('Balance')
+                axes[0, 0].legend()
+
+                # Plot credit_card
+                axes[0, 1].bar(credit_metrics['bank_id'], credit_metrics['sum'].astype(int), label='Total Balance')
+                axes[0, 1].bar(credit_metrics['bank_id'], credit_metrics['mean'].astype(int), label='Average Balance', alpha=0.7)
+                axes[0, 1].set_title('Credit Card Balances')
+                axes[0, 1].set_xlabel('Bank ID')
+                axes[0, 1].set_ylabel('Balance')
+                axes[0, 1].legend()
+
+                # Plot purchase
+                axes[1, 0].bar(purchase_metrics['bank_id'], purchase_metrics['mean'].astype(int), label='Average Purchase Size')
+                axes[1, 0].set_title('Average Purchase Size')
+                axes[1, 0].set_xlabel('Bank ID')
+                axes[1, 0].set_ylabel('Average Purchase Amount')
+                axes[1, 0].legend()
+                axes[1, 1].pie(purchase_metrics['count'], labels=purchase_metrics['bank_id'], autopct='%1.1f%%')
+                axes[1, 1].set_title('Purchase Count by Bank ID')
+
+                plt.tight_layout()
+                plt.show()
+
+            elif user_choice == "e":
+                return
+
+            else:
+                print("Invalid input, try again \n")
+        except ValueError:
+            print("Please enter a valid number or 'e' to exit \n")
 
 def login():
     username_check = False
@@ -144,51 +344,50 @@ def login():
             print("Incorrect password")
 
 if __name__ == "__main__":
-    if not os.path.exists("final_project.db"):
-        csv_to_sql()
-
-    conn = sqlite3.connect('final_project.db', isolation_level = None)
-    cur = conn.cursor()
     username = login()
 
     while True:
-        print("a) Read all user information")
-        print("b) Modify Account")
-        print("c) Deposit / withdraw money")
-        print("d) Make a credit payment")
-        print("e) Exit")
-        if username == "admin":
-            print("z) Admin")
-        print("")
-
-        user_input = input("Enter your choice: ")
-
-        if user_input == "a":
-            read_account(username)
+        try:
+            print("a) Read all user information")
+            print("b) Modify Account")
+            print("c) Deposit / withdraw money")
+            print("d) Make a credit payment")
+            print("e) Exit")
+            if username == "admin":
+                print("z) Admin")
             print("")
 
-        elif user_input == "b":
-            print("")
+            user_input = input("Enter your choice: ")
 
-        elif user_input == "c":
-            print("")
+            if user_input == "a":
+                read_account(username)
+                print("")
 
-        elif user_input == "d":
-            pay_card(username)
-            print("")
+            elif user_input == "b":
+                print("")
 
-        elif user_input == "e":
-            print("")
-            print("Exiting app...")
-            print("")
-            break
+            elif user_input == "c":
+                print("")
 
-        elif user_input == "z" and username == "admin":
-            print("")
+            elif user_input == "d":
+                pay_card(username)
+                print("")
 
-        else:
-            print("Invalid input, try again")
-            print("")
+            elif user_input == "e":
+                print("")
+                print("Exiting app...")
+                print("")
+                break
+
+            elif user_input == "z" and username == "admin":
+                admin_panel()
+                print("")
+
+            else:
+                print("Invalid input, try again")
+                print("")
+        except ValueError:
+            print("Please enter a valid number or 'e' to exit \n")
 
     cur.close()
 
