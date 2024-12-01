@@ -13,28 +13,6 @@ if not os.path.exists("final_project.db"):
 conn = sqlite3.connect('final_project.db', isolation_level = None)
 cur = conn.cursor()
 
-
-def read_account(username):
-    # If admin, list everything
-    if username == "admin":
-        cur.execute("SELECT * FROM user_account")
-        account = pd.DataFrame(cur.fetchall(), columns=[description[0] for description in cur.description])
-import sqlite3
-import os
-import pwinput
-import pandas as pd
-import matplotlib.pyplot as plt
-
-from csv_to_sql import csv_to_sql
-
-
-if not os.path.exists("final_project.db"):
-    csv_to_sql()
-
-conn = sqlite3.connect('final_project.db', isolation_level = None)
-cur = conn.cursor()
-
-
 def read_account(username):
     # If admin, list everything
     if username == "admin":
@@ -244,9 +222,6 @@ def deposit_withdraw(username):
                     print("Please enter a positive amount.")
             except ValueError:
                 print("Please enter a valid number (integer or decimal) or 'e' to exit \n")
-
-    
-
 
 def pay_card(username):
     # Find out which cards the current user owns
